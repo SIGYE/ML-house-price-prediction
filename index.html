@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>House Price Predictor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --background: #f9fafb;
+            --card: #ffffff;
+            --text: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --radius: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: var(--background);
+            color: var(--text);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+        }
+        
+        .card {
+            background-color: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        .result {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+        
+        .importance-bar {
+            height: 24px;
+            background-color: var(--primary);
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">House Price Predictor</h1>
+            <p class="subtitle">Enter your house details to get an estimated price prediction</p>
+        </header>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>House Details</h2>
+                <form id="prediction-form">
+                    <div class="form-group">
+                        <label for="size">Size (sq ft)</label>
+                        <input type="number" id="size" required min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bedrooms">Bedrooms</label>
+                        <input type="number" id="bedrooms" required min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bathrooms">Bathrooms</label>
+                        <input type="number" id="bathrooms" required min="0" step="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="age">Age (years)</label>
+                        <input type="number" id="age" required min="0">
+                    </div>
+                    
+                    <button type="submit">Get Prediction</button>
+                </form>
+            </div>
+            
+            <div class="card result" id="result-card">
+                <h2>Prediction Results</h2>
+                <div class="price" id="prediction"></div>
+                
+                <h3>Feature Importance</h3>
+                <div id="feature-importance">
+                    <!-- Feature importance will be inserted here -->
+                </div>
+
+                <h3>Graphs</h3>
+                <div id="graphs">
+                    <img id="bar_chart" src="" alt="Feature Importance Bar Chart">
+                    <img id="pie_chart" src="" alt="Feature Contribution Pie Chart">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.getElementById('prediction-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const size = document.getElementById('size').value;
+            const bedrooms = document.getElementById('bedrooms').value;
+            const bathrooms = document.getElementById('bathrooms').value;
+            const age = document.getElementById('age').value;
+            
+            const response = await fetch('http://127.0.0.1:5000/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ size, bedrooms, bathrooms, age })
+            });
+            
+            const data = await response.json();
+            
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            // Show the result
+            document.getElementById('result-card').style.display = 'block';
+            document.getElementById('prediction').textContent = `Estimated Price: $${data.prediction.toLocaleString()}`;
+            
+            // Display feature importance
+            const importanceDiv = document.getElementById('feature-importance');
+            importanceDiv.innerHTML = '';
+            data.featureImportance.forEach(function(imp) {
+                const div = document.createElement('div');
+                div.innerHTML = `<strong>${imp.feature}</strong>: ${imp.importance}%`;
+                importanceDiv.appendChild(div);
+            });
+
+            // Display charts
+            document.getElementById('bar_chart').src = data.bar_chart;
+            document.getElementById('pie_chart').src = data.pie_chart;
+        });
+    </script>
+</body>
+</html>
